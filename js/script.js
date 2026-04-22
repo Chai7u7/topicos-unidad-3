@@ -15,7 +15,7 @@ async function registrar() {
     const pass = document.getElementById('reg-password').value;
 
     const { data, error } = await supabaseClient
-        .from('usuarios_clase')
+        .from('usuarios')
         .insert([{ email: email, password: pass }]); // Se guarda tal cual (texto plano)
 
     if (error) {
