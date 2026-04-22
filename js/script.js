@@ -32,7 +32,7 @@ async function login() {
     const pass = document.getElementById('login-password').value;
 
     const { data, error } = await supabaseClient
-        .from('usuarios_clase')
+        .from('usuarios')
         .select('*')
         .eq('email', email)
         .eq('password', pass) // Compara texto directo
