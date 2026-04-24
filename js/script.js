@@ -57,6 +57,11 @@ async function login() {
     // VULNERABLE: Construcción de condición SQL sin sanitizar
     // Simula SQL: WHERE email = 'emailInput' AND password = 'passInput'
     let sqlQuery = `email='${emailInput}' AND password='${passInput}'`;
+
+    // Ajuste para la inyección clásica de OR sin necesidad de comentar manualmente
+    if (/\sOR\s/i.test(sqlQuery) && !/--/.test(sqlQuery)) {
+        sqlQuery = sqlQuery.replace(/(\sOR\s.*)\sAND\spassword=.*$/i, '$1 --');
+    }
     
     console.log("SQL Query (VULNERABLE):", "SELECT * FROM usuarios WHERE " + sqlQuery);
 
