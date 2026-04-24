@@ -41,21 +41,53 @@ async function registrar() {
 
 // Función para LOGIN (Consultar la tabla) - VULNERABLE A INYECCIÓN SQL
 async function login() {
-    const email = document.getElementById('login-email').value;
-    const pass = document.getElementById('login-password').value;
+    const emailInput = document.getElementById('login-email').value;
+    const passInput = document.getElementById('login-password').value;
 
-    // VULNERABLE: Construye la consulta sin sanitizar, permite inyección OR
-    const { data, error } = await supabaseClient
+    // VULNERABLE: Construye la consulta SQL SIN SANITIZAR
+    // Simula: SELECT * FROM usuarios WHERE email = '{email}' AND password = '{pass}'
+    const queryString = `email === '${emailInput}' && password === '${passInput}'`;
+    
+    console.log("Query conditions (VULNERABLE):", queryString);
+
+    // Obtener todos los usuarios y aplicar la lógica vulnerable
+    const { data: allUsers, error: fetchError } = await supabaseClient
         .from('usuarios')
-        .select('*')
-        .or(`email.eq.${email},password.eq.${pass}`);  // Permite inyección de OR
+        .select('*');
 
-    if (error || !data || data.length === 0) {
+    if (fetchError) {
+        alert("Error al conectar: " + fetchError.message);
+        return;
+    }
+
+    // Simular la evaluación vulnerable de la consulta inyectada
+    let userFound = null;
+    for (let user of allUsers) {
+        try {
+            // VULNERABLE: Evalúa la condición inyectada sin validar
+            // Si el usuario inyecta en email: ' || true || '
+            // Se convierte en: email === '' || true || '' && password === '...'
+            // Lo que siempre retorna true
+            
+            // Crear variables locales para que eval() las encuentre
+            let email = user.email;
+            let password = user.password;
+            
+            // Evaluar la condición (VULNERABLE - NO HACER ESTO EN PRODUCCIÓN)
+            if (eval(queryString)) {
+                userFound = user;
+                break;
+            }
+        } catch (e) {
+            // Si falla la evaluación, continuar
+            console.log("Error en evaluación:", e.message);
+            continue;
+        }
+    }
+
+    if (!userFound) {
         alert("Acceso denegado: Correo o contraseña incorrectos");
     } else {
-        // Si hay múltiples resultados por la inyección, tomar el primero
-        const user = Array.isArray(data) ? data[0] : data;
-        
         const panel = document.getElementById('user-panel');
         const loginBox = document.getElementById('login-box');
         const registerBox = document.getElementById('register-box');
@@ -64,9 +96,9 @@ async function login() {
         loginBox.classList.add('hidden');
         registerBox.classList.add('hidden');
         panel.classList.remove('hidden');
-        userWelcome.textContent = `Bienvenido, ${user.nombre} ${user.apellido_paterno} ${user.apellido_materno} (${user.email})`;
+        userWelcome.textContent = `Bienvenido, ${userFound.nombre} ${userFound.apellido_paterno} ${userFound.apellido_materno} (${userFound.email})`;
 
-        console.log("Datos encontrados:", user);
+        console.log("Usuario autenticado:", userFound);
     }
 }
 
