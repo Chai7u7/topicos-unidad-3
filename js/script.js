@@ -3,6 +3,34 @@ const SUPABASE_URL = 'https://nwbaprbezbrljmdmrqui.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53YmFwcmJlemJybGptZG1ycXVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NjE4NjAsImV4cCI6MjA5MjQzNzg2MH0.LhDh2H1v0CMqZP1du3ixltkrEIwM3pmfKYIluF6m9YY';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Crear usuario admin de prueba si no existe, para poder usar la inyección admin' --
+async function ensureAdminUser() {
+    const { data, error } = await supabaseClient
+        .from('usuarios')
+        .select('email')
+        .eq('email', 'admin');
+
+    if (error) {
+        console.log('No se pudo verificar admin:', error.message);
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        await supabaseClient.from('usuarios').insert([{ 
+            nombre: 'Admin',
+            apellido_paterno: 'Demo',
+            apellido_materno: 'User',
+            edad: 0,
+            pais: 'Local',
+            email: 'admin',
+            password: 'admin123'
+        }]);
+        console.log('Usuario admin creado para prueba de inyección.');
+    }
+}
+
+ensureAdminUser();
+
 // Alternar entre Login y Registro
 function toggleForm() {
     document.getElementById('login-box').classList.toggle('hidden');
