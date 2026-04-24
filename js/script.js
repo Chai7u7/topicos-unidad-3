@@ -41,7 +41,23 @@ async function login() {
     if (error || !data) {
         alert("Acceso denegado: Correo o contraseña incorrectos");
     } else {
-        alert("¡Bienvenido! Has iniciado sesión con éxito.");
+        const panel = document.getElementById('user-panel');
+        const loginBox = document.getElementById('login-box');
+        const registerBox = document.getElementById('register-box');
+        const userWelcome = document.getElementById('user-welcome');
+
+        loginBox.classList.add('hidden');
+        registerBox.classList.add('hidden');
+        panel.classList.remove('hidden');
+        userWelcome.textContent = `Has iniciado sesión como ${data.email}`;
+
         console.log("Datos encontrados:", data);
     }
+}
+
+function logout() {
+    document.getElementById('login-box').classList.remove('hidden');
+    document.getElementById('user-panel').classList.add('hidden');
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
 }
