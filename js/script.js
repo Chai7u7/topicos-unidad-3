@@ -60,26 +60,25 @@ async function login() {
     
     console.log("SQL Query (VULNERABLE):", "SELECT * FROM usuarios WHERE " + sqlQuery);
 
-    // Función vulnerable que convierte SQL a JavaScript evaluable
+    // Función vulnerable que evalúa la condición SQL
     function checkSQLCondition(user, sqlCondition) {
-        // Crear variables locales con los valores reales del usuario
-        const email = `'${user.email}'`;
-        const password = `'${user.password}'`;
+        // Reemplazar los placeholders con los valores reales del usuario
+        let condition = sqlCondition
+            .replace(/email/g, `'${user.email}'`)
+            .replace(/password/g, `'${user.password}'`);
         
-        // Convertir SQL a JavaScript
-        let jsCode = sqlCondition
-            .replace(/email/g, email)
-            .replace(/password/g, password)
+        // Convertir operadores SQL a JavaScript
+        condition = condition
             .replace(/ AND /gi, ' && ')
             .replace(/ OR /gi, ' || ')
             .replace(/=/g, '==')
             .split('--')[0]; // Eliminar comentarios SQL
         
-        console.log("Evaluating condition:", jsCode);
+        console.log("Evaluating condition:", condition);
         
         try {
-            // VULNERABLE: Usa eval para evaluar la condición inyectada
-            return eval(jsCode);
+            // VULNERABLE: Evalúa la condición inyectada
+            return eval(condition);
         } catch (e) {
             console.log("Error en evaluación:", e.message);
             return false;
