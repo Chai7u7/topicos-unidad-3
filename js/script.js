@@ -54,36 +54,42 @@ async function login() {
         return;
     }
 
-    // VULNERABLE: Construcción de condición sin sanitizar
+    // VULNERABLE: Construcción de condición SQL sin sanitizar
     // Simula SQL: WHERE email = 'emailInput' AND password = 'passInput'
-    const condition = `email='${emailInput}' AND password='${passInput}'`;
-    console.log("SQL Condition (VULNERABLE):", condition);
+    let sqlQuery = `email='${emailInput}' AND password='${passInput}'`;
+    
+    console.log("SQL Query (VULNERABLE):", "SELECT * FROM usuarios WHERE " + sqlQuery);
 
-    // Función vulnerable que simula SQL parsing
-    function evaluateCondition(user, sqlCondition) {
-        // Reemplazar los valores del usuario en la condición
-        let result = sqlCondition
-            .replace(/email/g, `'${user.email}'`)
-            .replace(/password/g, `'${user.password}'`);
+    // Función vulnerable que convierte SQL a JavaScript evaluable
+    function checkSQLCondition(user, sqlCondition) {
+        // Eliminar comentarios SQL (--) y lo que viene después
+        let condition = sqlCondition.split('--')[0];
         
-        console.log("Evaluated:", result);
+        // Reemplazar AND y OR para JavaScript
+        condition = condition
+            .replace(/ AND /gi, ' && ')
+            .replace(/ OR /gi, ' || ')
+            .replace(/=/g, '==');
         
-        // Evaluar de forma simplificada (VULNERABLE)
-        // ' AND ' -> cambiamos por && para JS
-        result = result.replace(/ AND /g, ' && ').replace(/ OR /g, ' || ');
+        // Crear el contexto con los valores del usuario actual
+        const email = user.email;
+        const password = user.password;
         
-        // '...' -> validar las comillas
+        console.log("Evaluating condition:", condition);
+        
         try {
-            return eval(result);
+            // VULNERABLE: Usa eval para evaluar la condición inyectada
+            return eval(condition);
         } catch (e) {
+            console.log("Error en evaluación:", e.message);
             return false;
         }
     }
 
-    // Buscar usuario que cumpla la condición inyectada
+    // Buscar primer usuario que cumpla la condición
     let userFound = null;
     for (let user of allUsers) {
-        if (evaluateCondition(user, condition)) {
+        if (checkSQLCondition(user, sqlQuery)) {
             userFound = user;
             break;
         }
