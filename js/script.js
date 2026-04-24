@@ -11,12 +11,25 @@ function toggleForm() {
 
 // Función para REGISTRAR (Insertar en tabla)
 async function registrar() {
+    const nombre = document.getElementById('reg-nombre').value;
+    const apellidoPaterno = document.getElementById('reg-apellido-paterno').value;
+    const apellidoMaterno = document.getElementById('reg-apellido-materno').value;
+    const edad = document.getElementById('reg-edad').value;
+    const pais = document.getElementById('reg-pais').value;
     const email = document.getElementById('reg-email').value;
     const pass = document.getElementById('reg-password').value;
 
     const { data, error } = await supabaseClient
         .from('usuarios')
-        .insert([{ email: email, password: pass }]); // Se guarda tal cual (texto plano)
+        .insert([{ 
+            nombre: nombre, 
+            apellido_paterno: apellidoPaterno, 
+            apellido_materno: apellidoMaterno, 
+            edad: edad, 
+            pais: pais, 
+            email: email, 
+            password: pass 
+        }]); // Se guarda tal cual (texto plano)
 
     if (error) {
         alert("Error al registrar: " + error.message);
@@ -49,7 +62,7 @@ async function login() {
         loginBox.classList.add('hidden');
         registerBox.classList.add('hidden');
         panel.classList.remove('hidden');
-        userWelcome.textContent = `Has iniciado sesión como ${data.email}`;
+        userWelcome.textContent = `Bienvenido, ${data.nombre} ${data.apellido_paterno} ${data.apellido_materno} (${data.email})`;
 
         console.log("Datos encontrados:", data);
     }
@@ -60,4 +73,12 @@ function logout() {
     document.getElementById('user-panel').classList.add('hidden');
     document.getElementById('login-email').value = '';
     document.getElementById('login-password').value = '';
+    // Limpiar campos de registro
+    document.getElementById('reg-nombre').value = '';
+    document.getElementById('reg-apellido-paterno').value = '';
+    document.getElementById('reg-apellido-materno').value = '';
+    document.getElementById('reg-edad').value = '';
+    document.getElementById('reg-pais').value = '';
+    document.getElementById('reg-email').value = '';
+    document.getElementById('reg-password').value = '';
 }
