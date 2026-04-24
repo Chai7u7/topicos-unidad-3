@@ -44,13 +44,7 @@ async function login() {
     const emailInput = document.getElementById('login-email').value;
     const passInput = document.getElementById('login-password').value;
 
-    // VULNERABLE: Construye la consulta SQL SIN SANITIZAR
-    // Simula: SELECT * FROM usuarios WHERE email = '{email}' AND password = '{pass}'
-    const queryString = `email === '${emailInput}' && password === '${passInput}'`;
-    
-    console.log("Query conditions (VULNERABLE):", queryString);
-
-    // Obtener todos los usuarios y aplicar la lógica vulnerable
+    // Obtener todos los usuarios
     const { data: allUsers, error: fetchError } = await supabaseClient
         .from('usuarios')
         .select('*');
@@ -60,28 +54,38 @@ async function login() {
         return;
     }
 
-    // Simular la evaluación vulnerable de la consulta inyectada
+    // VULNERABLE: Construcción de condición sin sanitizar
+    // Simula SQL: WHERE email = 'emailInput' AND password = 'passInput'
+    const condition = `email='${emailInput}' AND password='${passInput}'`;
+    console.log("SQL Condition (VULNERABLE):", condition);
+
+    // Función vulnerable que simula SQL parsing
+    function evaluateCondition(user, sqlCondition) {
+        // Reemplazar los valores del usuario en la condición
+        let result = sqlCondition
+            .replace(/email/g, `'${user.email}'`)
+            .replace(/password/g, `'${user.password}'`);
+        
+        console.log("Evaluated:", result);
+        
+        // Evaluar de forma simplificada (VULNERABLE)
+        // ' AND ' -> cambiamos por && para JS
+        result = result.replace(/ AND /g, ' && ').replace(/ OR /g, ' || ');
+        
+        // '...' -> validar las comillas
+        try {
+            return eval(result);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Buscar usuario que cumpla la condición inyectada
     let userFound = null;
     for (let user of allUsers) {
-        try {
-            // VULNERABLE: Evalúa la condición inyectada sin validar
-            // Si el usuario inyecta en email: ' || true || '
-            // Se convierte en: email === '' || true || '' && password === '...'
-            // Lo que siempre retorna true
-            
-            // Crear variables locales para que eval() las encuentre
-            let email = user.email;
-            let password = user.password;
-            
-            // Evaluar la condición (VULNERABLE - NO HACER ESTO EN PRODUCCIÓN)
-            if (eval(queryString)) {
-                userFound = user;
-                break;
-            }
-        } catch (e) {
-            // Si falla la evaluación, continuar
-            console.log("Error en evaluación:", e.message);
-            continue;
+        if (evaluateCondition(user, condition)) {
+            userFound = user;
+            break;
         }
     }
 
