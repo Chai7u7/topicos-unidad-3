@@ -62,24 +62,24 @@ async function login() {
 
     // Función vulnerable que convierte SQL a JavaScript evaluable
     function checkSQLCondition(user, sqlCondition) {
-        // Eliminar comentarios SQL (--) y lo que viene después
-        let condition = sqlCondition.split('--')[0];
+        // Crear variables locales con los valores reales del usuario
+        const email = `'${user.email}'`;
+        const password = `'${user.password}'`;
         
-        // Reemplazar AND y OR para JavaScript
-        condition = condition
+        // Convertir SQL a JavaScript
+        let jsCode = sqlCondition
+            .replace(/email/g, email)
+            .replace(/password/g, password)
             .replace(/ AND /gi, ' && ')
             .replace(/ OR /gi, ' || ')
-            .replace(/=/g, '==');
+            .replace(/=/g, '==')
+            .split('--')[0]; // Eliminar comentarios SQL
         
-        // Crear el contexto con los valores del usuario actual
-        const email = user.email;
-        const password = user.password;
-        
-        console.log("Evaluating condition:", condition);
+        console.log("Evaluating condition:", jsCode);
         
         try {
             // VULNERABLE: Usa eval para evaluar la condición inyectada
-            return eval(condition);
+            return eval(jsCode);
         } catch (e) {
             console.log("Error en evaluación:", e.message);
             return false;
