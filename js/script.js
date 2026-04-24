@@ -39,21 +39,23 @@ async function registrar() {
     }
 }
 
-// Función para LOGIN (Consultar la tabla)
+// Función para LOGIN (Consultar la tabla) - VULNERABLE A INYECCIÓN SQL
 async function login() {
     const email = document.getElementById('login-email').value;
     const pass = document.getElementById('login-password').value;
 
+    // VULNERABLE: Construye la consulta sin sanitizar, permite inyección OR
     const { data, error } = await supabaseClient
         .from('usuarios')
         .select('*')
-        .eq('email', email)
-        .eq('password', pass) // Compara texto directo
-        .single();
+        .or(`email.eq.${email},password.eq.${pass}`);  // Permite inyección de OR
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
         alert("Acceso denegado: Correo o contraseña incorrectos");
     } else {
+        // Si hay múltiples resultados por la inyección, tomar el primero
+        const user = Array.isArray(data) ? data[0] : data;
+        
         const panel = document.getElementById('user-panel');
         const loginBox = document.getElementById('login-box');
         const registerBox = document.getElementById('register-box');
@@ -62,9 +64,9 @@ async function login() {
         loginBox.classList.add('hidden');
         registerBox.classList.add('hidden');
         panel.classList.remove('hidden');
-        userWelcome.textContent = `Bienvenido, ${data.nombre} ${data.apellido_paterno} ${data.apellido_materno} (${data.email})`;
+        userWelcome.textContent = `Bienvenido, ${user.nombre} ${user.apellido_paterno} ${user.apellido_materno} (${user.email})`;
 
-        console.log("Datos encontrados:", data);
+        console.log("Datos encontrados:", user);
     }
 }
 
