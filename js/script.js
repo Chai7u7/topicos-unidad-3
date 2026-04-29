@@ -93,8 +93,33 @@ async function login() {
     
     console.log("SQL Query (VULNERABLE):", "SELECT * FROM usuarios WHERE " + sqlQuery);
 
+    // Simular UNION SELECT
+    let unionUser = null;
+    if (sqlQuery.includes('UNION')) {
+        const unionMatch = sqlQuery.match(/UNION\s+SELECT\s+(.+?)\s*--/i);
+        if (unionMatch) {
+            const selectValues = unionMatch[1].split(',').map(v => v.trim().replace(/'/g, ''));
+            const processedValues = selectValues.map(v => {
+                if (v === 'database()') return 'nwbaprbezbrljmdmrqui'; // Nombre de la base de datos
+                return v;
+            });
+            unionUser = {
+                nombre: processedValues[0] || '',
+                apellido_paterno: '',
+                apellido_materno: '',
+                edad: 0,
+                pais: '',
+                email: processedValues[1] || '',
+                password: processedValues[2] || ''
+            };
+            allUsers.push(unionUser);
+        }
+    }
+
     // Función vulnerable que evalúa la condición SQL
     function checkSQLCondition(user, sqlCondition) {
+        if (user === unionUser) return true; // Para UNION, siempre verdadero
+
         // Reemplazar los placeholders con los valores reales del usuario
         let condition = sqlCondition
             .replace(/email/g, `'${user.email}'`)
