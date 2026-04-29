@@ -101,44 +101,56 @@ async function login() {
         'admin': ['configuracion', 'logs', 'sesiones']
     };
     
-    if (sqlQuery.includes('UNION')) {
-        // Mejorado: Capturar UNION SELECT con información_schema.tables con o sin WHERE
-        const unionMatch = sqlQuery.match(/UNION\s+SELECT\s+(.+?)\s+FROM\s+information_schema\.tables(\s+WHERE\s+table_schema\s*=\s*['\"]?(\w+)['\"]?)?(\s*--)?/i);
+    if (sqlQuery.includes('UNION') || sqlQuery.includes('union')) {
+        // Regex más flexible para capturar UNION SELECT
+        let schemaFilter = null;
+        let hasInformationSchema = false;
         
-        if (unionMatch) {
-            // Caso 1: UNION SELECT ... FROM information_schema.tables (para enumerar tablas)
-            if (sqlQuery.includes('information_schema.tables')) {
-                let tablesToShow = [];
-                const schemaFilter = unionMatch[3]; // Captura el nombre del schema del WHERE
-                
-                if (schemaFilter && allTablesSimulated[schemaFilter]) {
-                    // Si hay filtro de schema, mostrar solo las tablas de ese schema
-                    tablesToShow = allTablesSimulated[schemaFilter];
-                } else {
-                    // Si no hay filtro, mostrar todas las tablas de todos los schemas
-                    tablesToShow = Object.values(allTablesSimulated).flat();
-                }
-                
-                // Crear un usuario por cada tabla encontrada
-                tablesToShow.forEach(tableName => {
-                    const unionUser = {
-                        nombre: tableName,
-                        apellido_paterno: 'Schema',
-                        apellido_materno: 'Table',
-                        edad: 0,
-                        pais: 'Database',
-                        email: tableName,
-                        password: 'table'
-                    };
-                    unionUsers.push(unionUser);
-                    allUsers.push(unionUser);
-                });
-                
-                const schemaText = schemaFilter ? ` en el schema '${schemaFilter}'` : '';
-                alert(`📊 Tablas encontradas${schemaText}:\n${tablesToShow.join('\n')}`);
+        // Verificar si hay información_schema.tables
+        if (sqlQuery.toLowerCase().includes('information_schema.tables') || sqlQuery.toLowerCase().includes('information_sc')) {
+            hasInformationSchema = true;
+            
+            // Buscar el schema del WHERE (table_schema = 'nombre')
+            const schemaMatch = sqlQuery.match(/table_schema\s*=\s*['\"]?(\w+)['\"]?/i);
+            if (schemaMatch) {
+                schemaFilter = schemaMatch[1];
+            }
+        }
+        
+        if (hasInformationSchema) {
+            // Caso 1: UNION SELECT ... FROM information_schema.tables
+            let tablesToShow = [];
+            
+            if (schemaFilter && allTablesSimulated[schemaFilter]) {
+                // Si hay filtro de schema, mostrar solo las tablas de ese schema
+                tablesToShow = allTablesSimulated[schemaFilter];
             } else {
-                // Caso 2: UNION SELECT con valores simples (como database())
-                const selectValues = unionMatch[1].split(',').map(v => v.trim().replace(/'/g, ''));
+                // Si no hay filtro, mostrar todas las tablas de todos los schemas
+                tablesToShow = Object.values(allTablesSimulated).flat();
+            }
+            
+            // Crear un usuario por cada tabla encontrada
+            tablesToShow.forEach(tableName => {
+                const unionUser = {
+                    nombre: tableName,
+                    apellido_paterno: 'Schema',
+                    apellido_materno: 'Table',
+                    edad: 0,
+                    pais: 'Database',
+                    email: tableName,
+                    password: 'table'
+                };
+                unionUsers.push(unionUser);
+                allUsers.push(unionUser);
+            });
+            
+            const schemaText = schemaFilter ? ` en el schema '${schemaFilter}'` : '';
+            alert(`📊 Tablas encontradas${schemaText}:\n${tablesToShow.join('\n')}`);
+        } else {
+            // Caso 2: UNION SELECT con valores simples (como database())
+            const unionMatch = sqlQuery.match(/UNION\s+SELECT\s+(.+?)(?:\s+--|$)/i);
+            if (unionMatch) {
+                const selectValues = unionMatch[1].split(',').map(v => v.trim().replace(/'/g, '').replace(/[^a-zA-Z0-9()_]/g, ''));
                 const processedValues = selectValues.map(v => {
                     if (v === 'database()') return 'nwbaprbezbrljmdmrqui'; // Nombre de la base de datos
                     return v;
