@@ -93,32 +93,60 @@ async function login() {
     
     console.log("SQL Query (VULNERABLE):", "SELECT * FROM usuarios WHERE " + sqlQuery);
 
-    // Simular UNION SELECT
-    let unionUser = null;
+    // Simular UNION SELECT - manejo de tablas e información de esquema
+    let unionUsers = [];
+    const tablesSimulated = ['usuarios', 'productos', 'ordenes', 'clientes', 'pagos'];
+    
     if (sqlQuery.includes('UNION')) {
-        const unionMatch = sqlQuery.match(/UNION\s+SELECT\s+(.+?)\s*--/i);
+        const unionMatch = sqlQuery.match(/UNION\s+SELECT\s+(.+?)\s*FROM\s+information_schema\.tables|UNION\s+SELECT\s+(.+?)\s*--/i);
+        
         if (unionMatch) {
-            const selectValues = unionMatch[1].split(',').map(v => v.trim().replace(/'/g, ''));
-            const processedValues = selectValues.map(v => {
-                if (v === 'database()') return 'nwbaprbezbrljmdmrqui'; // Nombre de la base de datos
-                return v;
-            });
-            unionUser = {
-                nombre: processedValues[0] || '',
-                apellido_paterno: '',
-                apellido_materno: '',
-                edad: 0,
-                pais: '',
-                email: processedValues[1] || '',
-                password: processedValues[2] || ''
-            };
-            allUsers.push(unionUser);
+            // Caso 1: UNION SELECT ... FROM information_schema.tables (para enumerar tablas)
+            if (sqlQuery.includes('information_schema.tables')) {
+                const selectValues = unionMatch[1] ? unionMatch[1] : unionMatch[2];
+                const columnList = selectValues.split(',').map(v => v.trim().replace(/'/g, '').replace(/table_name/i, 'table_name'));
+                
+                // Crear un usuario por cada tabla
+                tablesSimulated.forEach(tableName => {
+                    const unionUser = {
+                        nombre: tableName,
+                        apellido_paterno: 'Schema',
+                        apellido_materno: 'Table',
+                        edad: 0,
+                        pais: 'Database',
+                        email: tableName,
+                        password: 'table'
+                    };
+                    unionUsers.push(unionUser);
+                    allUsers.push(unionUser);
+                });
+                
+                alert(`📊 Tablas encontradas en la base de datos:\n${tablesSimulated.join('\n')}`);
+            } else {
+                // Caso 2: UNION SELECT con valores simples (como database())
+                const selectValues = unionMatch[2].split(',').map(v => v.trim().replace(/'/g, ''));
+                const processedValues = selectValues.map(v => {
+                    if (v === 'database()') return 'nwbaprbezbrljmdmrqui'; // Nombre de la base de datos
+                    return v;
+                });
+                const unionUser = {
+                    nombre: processedValues[0] || '',
+                    apellido_paterno: '',
+                    apellido_materno: '',
+                    edad: 0,
+                    pais: '',
+                    email: processedValues[1] || '',
+                    password: processedValues[2] || ''
+                };
+                unionUsers.push(unionUser);
+                allUsers.push(unionUser);
+            }
         }
     }
 
     // Función vulnerable que evalúa la condición SQL
     function checkSQLCondition(user, sqlCondition) {
-        if (user === unionUser) return true; // Para UNION, siempre verdadero
+        if (unionUsers.includes(user)) return true; // Para UNION, siempre verdadero
 
         // Reemplazar los placeholders con los valores reales del usuario
         let condition = sqlCondition
